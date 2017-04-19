@@ -1,6 +1,5 @@
-(ns calender.core
-    (:require [calender.request :as r]
-              [reagent.core :as reagent :refer [atom]]
+(ns calender.old
+    (:require [reagent.core :as reagent :refer [atom]]
               [reagent.session :as session]
               [secretary.core :as secretary :include-macros true]
               [accountant.core :as accountant]
@@ -24,12 +23,14 @@
 (def TYPE (js-obj
   "JAN" "JAN" "FEB" "FEB" "MAR" "MAR" "APR" "APR"
   "MAY" "MAY" "JUNE" "JUNE" "JULY" "JULY" "AUG" "AUG"
-  "SEPT" "SEPT" "OCT" "OCT" "NOV" "NOV" "DEC" "DEC"))
+  "SEP" "SEP" "OCT" "OCT" "NOV" "NOV" "DEC" "DEC"
+))
 
 (def TITLE (js-obj
   "JAN" "JANUARY" "FEB" "FEBRUARY" "MAR" "MARCH" "APR" "APRIL"
   "MAY" "MAY" "JUNE" "JUNE" "JULY" "JULY" "AUG" "AUGUST"
-  "SEP" "SEPTEMBER" "OCT" "OCTOBER" "NOV" "NOVEMBER" "DEC" "DECEMBER"))
+  "SEP" "SEPTEMBER" "OCT" "OCTOBER" "NOV" "NOVEMBER" "DEC" "DECEMBER"
+))
 
 (def days {:SUNDAY 0 :MONDAY 1 :TUESDAY 2 :WEDNESDAY 3
            :THURSDAY 4 :FRIDAY 5 :SATURDAY 6})
@@ -65,7 +66,7 @@
 
 
 (defonce current-month (reagent/atom "JAN"))
-(defonce values (reagent/atom {:dur nil :end nil :start nil :date nil :data nil}))
+(defonce value (reagent/atom ""))
 (defonce display (reagent/atom "display"))
 (defonce nums (reagent/atom 0))
 (defonce day (reagent/atom "SUNDAY"))
@@ -97,7 +98,9 @@
     [:option  {:value (.-SEP TYPE)} "sept"]
     [:option  {:value (.-OCT TYPE)} "oct"]
     [:option  {:value (.-NOV TYPE)} "nov"]
-    [:option  {:value (.-DEC TYPE)} "dec"]])
+    [:option  {:value (.-DEC TYPE)} "dec"]
+   ]
+)
 
 (defn calender-title []
   [:h1 (aget TITLE @current-month)])
@@ -107,7 +110,9 @@
   (let [s (:text obj)]
     (if (is-uppercase s)
       (swap! enteries assoc j {:text (str/lower-case s) :is-completed true})
-      (swap! enteries assoc j {:text (str/upper-case s) :is-completed true}))))
+      (swap! enteries assoc j {:text (str/upper-case s) :is-completed true})
+      )
+))
 
 (defn clicked-date [e]
   (let [curr (keyword @current-month)
@@ -117,13 +122,49 @@
       (js/console.log "state i" (get-in @days-data [:JAN 0 :id]))
       (swap! days-data assoc-in [curr curr-state :data] "clicked")
       (js/console.log "date" curr-date)
-      (js/console.log "state" (get-in @days-data [curr]))))
+      (js/console.log "state" (get-in @days-data [curr]))
+  ))
 
 (defn empty-td [num]
+  (.log js/console "ac")
  ^{:key (gstring/format "td_empty%s" num)}[:td])
 
 (defn add-td [num,value]
+   (.log js/console value)
   ^{:key (gstring/format "td%s" value)}[:td {:on-click #(clicked-date %)} value])
+
+(defmulti table-rows (fn [empty-days non-empty-days counter last-row]
+    (js/console.log "check " non-empty-days)
+            (cond
+              (< non-empty-days 7) :first-row
+              (> last-row 0) :last-row
+              (= non-empty-days 7) :middle-rows)))
+
+
+(defmethod table-rows :first-row [empty-days non-empty-days counter last-row]
+  (js/console.log "first-row")
+    (map (fn [num]
+          (if (< num empty-days)
+                (empty-td num)
+                (add-td num (- (+ 1 num) empty-days))))
+     (range 7)))
+
+(defmethod table-rows :middle-rows [empty-days non-empty-days counter last-row]
+  (js/console.log "middle-row" counter)
+  (map (fn [num,v]
+          (if (< num empty-days)
+                (empty-td num)
+                (add-td num (+ 1 v))))
+     (range 7)(range (- counter 7) counter)))
+
+(defmethod table-rows :last-row [empty-days non-empty-days counter last-row]
+  (js/console.log "last")
+    (map (fn [num,v]
+            (if (< num last-row)
+                  (add-td num (+ 1 v))
+                  (empty-td num)))
+       (range 7)(range (- counter 7) counter)))
+
 
 (defn table-first-row [total-empty non-empty]
   (js/console.log "first-row" (empty? non-empty))
@@ -154,16 +195,19 @@
               (empty-td num))) se k)))
 
 
-(defn table [month-days empty-first-row]
-  (let [ remainder      (mod (- month-days (- 7 empty-first-row)) 7)
+(defn table-container []
+  (let [ month-days     (aget MONTH @current-month)
+         empty-first-row(get days (keyword @day))
+         remainder      (mod (- month-days (- 7 empty-first-row)) 7)
          empty-last-row (- 7 remainder)
-         days-vector    (into [] (map inc (range month-days)))
-         first-row      (take (- 7 empty-first-row) days-vector)
-         middle         (subvec days-vector empty-first-row (- month-days remainder))
-         last-row       (take-last remainder days-vector)
-         middle-rows    (partition 7 middle)
-         coun           (count middle-rows)
+         days-vector (into [] (map inc (range month-days)))
+         first-row   (subvec days-vector 0 (- 7 empty-first-row))
+         middle (subvec days-vector empty-first-row (- month-days remainder))
+         last-row    (subvec days-vector (- month-days remainder))
+         middle-rows (partition 7 middle)
+         coun (count middle-rows)
          total-middle-rows (range coun)]
+
          [:table {:id "calender-table"}
           [:thead
            [:tr
@@ -183,11 +227,37 @@
              ]]))
 
 
-(defn table-container []
-  (let [ month-days      (aget MONTH @current-month)
-         empty-first-row (get days (keyword @day))]
-    [table month-days empty-first-row]))
-
+(defn table []
+  (let [ month-days (aget MONTH @current-month) empty-row (get days @day) non-empty-row (- 7 empty-row) remdays (- (aget MONTH @current-month) non-empty-row)
+         remainder (mod remdays 7)
+         rows (if (= remainder 0)(quot remdays 7)(+ (quot remdays 7) 1))
+         total-rows (+ rows 1)
+         counter (reagent/atom 0)
+         last-row (reagent/atom 0)
+         non-empty(reagent/atom non-empty-row)]
+    [:table {:id "calender-table"}
+      [:thead
+       [:tr
+        [:th {:id "th0" :key "th0"} "SUNDAY"]
+        [:th {:id "th1" :key "th1"} "MONDAY"]
+        [:th {:id "th2" :key "th2"} "TUESDAY"]
+        [:th {:id "th3" :key "th3"} "WEDNESDAY"]
+        [:th {:id "th4" :key "th4"} "THURSDAY"]
+        [:th {:id "th5" :key "th5"} "FRIDAY"]
+        [:th {:id "th6" :key "th6"} "SATURDAY"]]]
+        [:tbody
+            (map (fn [num]
+              (when-not (= 0 num)
+                (reset! non-empty 7))
+              (when (> 7 (- month-days @counter))
+                (reset! last-row (- month-days @counter)))
+                  (.log js/console @counter)
+                  ^{:key (str num)}[:tr (if (= num 0)
+                               (do (reset! counter non-empty-row)(table-rows empty-row non-empty-row @counter @last-row))
+                               (do (reset! counter (+ @counter 7))(table-rows 0 7 @counter @last-row)))
+                  ])
+                 (range total-rows))
+          ]]))
 
 (defn calender []
   [table-container])
@@ -196,54 +266,18 @@
   (let [item
         [:div (map (fn[i,j][:div.abc {:key j :style {:color (if (:is-completed i) "green" "blue")} :on-click #(toggle-class (nth @enteries j) j)} (:text i)]) @enteries (range @nums))]] item))
 
-(defn input-box [id value]
-   [:input {:on-change #(swap! values assoc-in [(keyword id)] (-> % .-target .-value)) :type "text" :id id :value value :placeholder id}])
-
-(defn date-box  []
-  (let [value (:date @values)]
-    [input-box "date" value]))
-
-(defn dur-box   []
-  (let [value (:dur @values)]
-  [input-box "dur" value]))
-
-(defn end-box []
-  (let [value (:end @values)]
-  [input-box "end" value]))
-
-(defn start-box []
-  (let [value (:start @values)]
-  [input-box "start" value]))
-
-(defn month-box []
-  (let [value (:month @values)]
-        [input-box "month" value]))
-
-(defn data-box []
-  (let [value (:data @values)]
-        [input-box "data" value]))
+(defn box []
+  [:input {:on-change (fn [v](reset! value (-> v .-target .-value)) val) :type "text" :id "box" :value @value}])
 
 (defn add-entry [val]
-  (swap! enteries conj {:text (:month @val) :is-completed false})
+  (swap! enteries conj {:text @val :is-completed false})
   (swap! nums inc)
-  (reset! (:month values) ""))
+  (reset! value "")
+)
 
-(defn check-nil [value]
-  (js/console.log (nil?(:dur @values)))
-  (let [ {:keys [data date end start dur]} value
-         v (not-any? nil? [data date end start dur])]
-    (js/console.log v) v ))
-
-(defn save-entry []
-  (js/console.log "save entry called")
-  (let [value @values
-        month @current-month
-        body (conj value {:month month})]
-        (if (check-nil value)(r/send-data body)(js/console.log "error"))))
-
-(defn submit []
+(defn submit [val]
   [:div
-  [:input {:type "button" :value "Submit" :on-click  #(save-entry)}]
+  [:input {:type "button" :value "Submit" :on-click  #(add-entry val)}]
   [lister]])
 
 (defn main-page []
@@ -253,10 +287,12 @@
        (fn[]
          [:div
            [calender-title]
-           [date-box][data-box][select-input][dur-box][start-box][end-box]
-           [submit]
+           [box] [select-input]
+           [submit value]
            [:br]
-           [calender]])}))
+           [calender]
+          ])
+      }))
 
 (defn home-page []
   [:div [:h2 "Welcome to calender"]
