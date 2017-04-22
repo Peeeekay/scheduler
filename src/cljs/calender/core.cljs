@@ -148,7 +148,6 @@
           k  (concat non-empty (range (last non-empty)(+ total-empty (last non-empty))))]
       (map
         (fn [value num]
-          (js/console.log "common")
             (if-not (= 0 value)
               (add-td value value)
               (empty-td num))) se k)))
