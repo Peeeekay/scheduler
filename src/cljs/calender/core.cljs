@@ -1,5 +1,6 @@
 (ns calender.core
-    (:require [reagent.core :as reagent :refer [atom]]
+    (:require [calender.request :as r]
+              [reagent.core :as reagent :refer [atom]]
               [reagent.session :as session]
               [secretary.core :as secretary :include-macros true]
               [accountant.core :as accountant]
@@ -23,14 +24,12 @@
 (def TYPE (js-obj
   "JAN" "JAN" "FEB" "FEB" "MAR" "MAR" "APR" "APR"
   "MAY" "MAY" "JUNE" "JUNE" "JULY" "JULY" "AUG" "AUG"
-  "SEP" "SEP" "OCT" "OCT" "NOV" "NOV" "DEC" "DEC"
-))
+  "SEPT" "SEPT" "OCT" "OCT" "NOV" "NOV" "DEC" "DEC"))
 
 (def TITLE (js-obj
   "JAN" "JANUARY" "FEB" "FEBRUARY" "MAR" "MARCH" "APR" "APRIL"
   "MAY" "MAY" "JUNE" "JUNE" "JULY" "JULY" "AUG" "AUGUST"
-  "SEP" "SEPTEMBER" "OCT" "OCTOBER" "NOV" "NOVEMBER" "DEC" "DECEMBER"
-))
+  "SEP" "SEPTEMBER" "OCT" "OCTOBER" "NOV" "NOVEMBER" "DEC" "DECEMBER"))
 
 (def days {:SUNDAY 0 :MONDAY 1 :TUESDAY 2 :WEDNESDAY 3
            :THURSDAY 4 :FRIDAY 5 :SATURDAY 6})
@@ -66,7 +65,7 @@
 
 
 (defonce current-month (reagent/atom "JAN"))
-(defonce value (reagent/atom ""))
+(defonce values (reagent/atom {:dur nil :end nil :start nil :date nil :data nil}))
 (defonce display (reagent/atom "display"))
 (defonce nums (reagent/atom 0))
 (defonce day (reagent/atom "SUNDAY"))
@@ -98,9 +97,7 @@
     [:option  {:value (.-SEP TYPE)} "sept"]
     [:option  {:value (.-OCT TYPE)} "oct"]
     [:option  {:value (.-NOV TYPE)} "nov"]
-    [:option  {:value (.-DEC TYPE)} "dec"]
-   ]
-)
+    [:option  {:value (.-DEC TYPE)} "dec"]])
 
 (defn calender-title []
   [:h1 (aget TITLE @current-month)])
@@ -110,9 +107,7 @@
   (let [s (:text obj)]
     (if (is-uppercase s)
       (swap! enteries assoc j {:text (str/lower-case s) :is-completed true})
-      (swap! enteries assoc j {:text (str/upper-case s) :is-completed true})
-      )
-))
+      (swap! enteries assoc j {:text (str/upper-case s) :is-completed true}))))
 
 (defn clicked-date [e]
   (let [curr (keyword @current-month)
@@ -122,8 +117,7 @@
       (js/console.log "state i" (get-in @days-data [:JAN 0 :id]))
       (swap! days-data assoc-in [curr curr-state :data] "clicked")
       (js/console.log "date" curr-date)
-      (js/console.log "state" (get-in @days-data [curr]))
-  ))
+      (js/console.log "state" (get-in @days-data [curr]))))
 
 (defn empty-td [num]
   (.log js/console "ac")
@@ -204,18 +198,54 @@
   (let [item
         [:div (map (fn[i,j][:div.abc {:key j :style {:color (if (:is-completed i) "green" "blue")} :on-click #(toggle-class (nth @enteries j) j)} (:text i)]) @enteries (range @nums))]] item))
 
-(defn box []
-  [:input {:on-change (fn [v](reset! value (-> v .-target .-value)) val) :type "text" :id "box" :value @value}])
+(defn input-box [id value]
+   [:input {:on-change #(swap! values assoc-in [(keyword id)] (-> % .-target .-value)) :type "text" :id id :value value :placeholder id}])
+
+(defn date-box  []
+  (let [value (:date @values)]
+    [input-box "date" value]))
+
+(defn dur-box   []
+  (let [value (:dur @values)]
+  [input-box "dur" value]))
+
+(defn end-box []
+  (let [value (:end @values)]
+  [input-box "end" value]))
+
+(defn start-box []
+  (let [value (:start @values)]
+  [input-box "start" value]))
+
+(defn month-box []
+  (let [value (:month @values)]
+        [input-box "month" value]))
+
+(defn data-box []
+  (let [value (:data @values)]
+        [input-box "data" value]))
 
 (defn add-entry [val]
-  (swap! enteries conj {:text @val :is-completed false})
+  (swap! enteries conj {:text (:month @val) :is-completed false})
   (swap! nums inc)
-  (reset! value "")
-)
+  (reset! (:month values) ""))
 
-(defn submit [val]
+(defn check-nil [value]
+  (js/console.log (nil?(:dur @values)))
+  (let [ {:keys [data date end start dur]} value
+         v (not-any? nil? [data date end start dur])]
+    (js/console.log v) v ))
+
+(defn save-entry []
+  (js/console.log "save entry called")
+  (let [value @values
+        month @current-month
+        body (conj value {:month month})]
+        (if (check-nil value)(r/send-data body)(js/console.log "error"))))
+
+(defn submit []
   [:div
-  [:input {:type "button" :value "Submit" :on-click  #(add-entry val)}]
+  [:input {:type "button" :value "Submit" :on-click  #(save-entry)}]
   [lister]])
 
 (defn main-page []
@@ -225,12 +255,10 @@
        (fn[]
          [:div
            [calender-title]
-           [box] [select-input]
-           [submit value]
+           [date-box][data-box][select-input][dur-box][start-box][end-box]
+           [submit]
            [:br]
-           [calender]
-           ])
-      }))
+           [calender]])}))
 
 (defn home-page []
   [:div [:h2 "Welcome to calender"]
