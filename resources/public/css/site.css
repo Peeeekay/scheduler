@@ -39,14 +39,18 @@ a:hover {
   text-decoration: underline;
 }
 
+#calender-table {
+  position: absolute;
+  margin : auto;
+}
 #calender-table tbody tr td {
-  width: 100px;
-  height:100px;
+  width: 70px;
+  height:70px;
 
 }
 #calender-table th {
-  width: 100px;
-  height:100px;
+  width: 70px;
+  height:70px;
 }
 
 table, th, td {

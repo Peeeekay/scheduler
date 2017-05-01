@@ -1,5 +1,6 @@
 (ns calender.handler
-  (:require [clojure.walk]
+  (:require [clojure.tools.logging :as log]
+            [clojure.walk]
             [calender.db :as db]
             [calender.views :as views]
             [ring.util.response :refer [response]]
@@ -36,19 +37,26 @@
      mount-target
      (include-js "/js/app.js")]))
 
+(defn test-f [r]
+  (log/info r)
+  (log/info "f")
+  (response "success"))
+
 (defn test-function []
   (let [data {:date 2 :data "data" :month "JAN" :start-time 1 :end-time 2 :duration 1}]
     (db/create-date-node data)
   (response {:text (format "The test route works: %s" (:name data))})))
 
-(defn handle-send-data [req]
-  (let [input (json->map req)]))
+(defn handle-send-date [req]
+  (let [body (json->map(:body req))]
+    (db/create-date-node body)
+    (response {:text "The node has been created"})))
 
 (defroutes routes
   (GET "/" [] (loading-page))
   (GET "/about" [] (loading-page))
   (GET "/test" [] (test-function))
-;;(POST "/test" req (test-function req))
+  (POST "/save" req (handle-send-date req))
   (resources "/")
   (not-found "Not Found"))
 
