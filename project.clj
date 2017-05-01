@@ -4,7 +4,8 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
-  :dependencies [[org.clojure/tools.logging "0.3.1"]
+  :dependencies [[mount "0.1.11"]
+                 [org.clojure/tools.logging "0.3.1"]
                  [ring/ring-json "0.4.0"]
                  [cljs-http "0.1.42"]
                  [org.neo4j.driver/neo4j-java-driver "1.2.0"]
