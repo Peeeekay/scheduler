@@ -51,7 +51,7 @@
  ^{:key (gstring/format "td_empty%s" num)}[:td])
 
 (defn add-td [num value clicked-date]
-  ^{:key (gstring/format "td%s" value) :id num}[:td {:on-click #(clicked-date num)} value])
+  ^{:key (gstring/format "td%s" value) :id num}[:td {:on-click #(clicked-date num)} value ])
 
 (defn table-first-row [total-empty non-empty handle-click]
       (let [se (concat (repeat total-empty 0) non-empty)
@@ -76,33 +76,34 @@
               (add-td value value #(handle-click %))
               (empty-td num))) se k)))
 
-(defn table [month-days empty-first-row curr-month handle-click-date]
+(defn table
+  [month-days empty-first-row curr-month handle-click-date handle-request]
   (let [ remainder      (mod (- month-days (- 7 empty-first-row)) 7)
          empty-last-row (- 7 remainder)
          days-vector    (into [] (map inc (range month-days)))
          first-row      (take (- 7 empty-first-row) days-vector)
          middle         (subvec days-vector (- 7 empty-first-row) (- month-days remainder))
          last-row       (take-last remainder days-vector)
-         _ (js/console.log "last" (pr-str first-row))
          middle-rows    (partition 7 middle)
          coun           (count middle-rows)
          total-middle-rows (range coun)]
-         [:table {:id "calender-table"}
-          [:thead
-           [:tr
-            [:th {:id "th0" :key "th0"} "SUNDAY"]
-            [:th {:id "th1" :key "th1"} "MONDAY"]
-            [:th {:id "th2" :key "th2"} "TUESDAY"]
-            [:th {:id "th3" :key "th3"} "WEDNESDAY"]
-            [:th {:id "th4" :key "th4"} "THURSDAY"]
-            [:th {:id "th5" :key "th5"} "FRIDAY"]
-            [:th {:id "th6" :key "th6"} "SATURDAY"]]]
-            [:tbody
-               ^{key (str 0)}[:tr (table-first-row empty-first-row first-row #(handle-click-date %))]
-                (map
-                  (fn [num middle-row]
-                    ^{key (str (+ 1 num))}[:tr (table-middle-row middle-row #(handle-click-date %))]) total-middle-rows middle-rows)
-                ^{key (str (+ coun 1))} [:tr (table-last-row empty-last-row last-row #(handle-click-date %))]]]))
+         (js/console.log "fr")
+           [:table {:id "calender-table"}
+            [:thead
+             [:tr
+              [:th {:id "th0" :key "th0"} "SUNDAY"]
+              [:th {:id "th1" :key "th1"} "MONDAY"]
+              [:th {:id "th2" :key "th2"} "TUESDAY"]
+              [:th {:id "th3" :key "th3"} "WEDNESDAY"]
+              [:th {:id "th4" :key "th4"} "THURSDAY"]
+              [:th {:id "th5" :key "th5"} "FRIDAY"]
+              [:th {:id "th6" :key "th6"} "SATURDAY"]]]
+              [:tbody
+                 ^{key (str 0)}[:tr (table-first-row empty-first-row first-row #(handle-click-date %))]
+                  (map
+                    (fn [num middle-row]
+                      ^{key (str (+ 1 num))}[:tr (table-middle-row middle-row #(handle-click-date %))]) total-middle-rows middle-rows)
+                  ^{key (str (+ coun 1))} [:tr (table-last-row empty-last-row last-row #(handle-click-date %))]]]))
 
 ;; form-component
 

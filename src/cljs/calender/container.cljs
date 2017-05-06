@@ -1,5 +1,7 @@
 (ns calender.container
+    (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [calender.request :as r]
+              [cljs.core.async :refer [<!]]
               [reagent.core :as reagent :refer [atom]]
               [reagent.session :as session]
               [secretary.core :as secretary :include-macros true]
@@ -11,7 +13,7 @@
               [calender.abc :refer [conn]]))
 
 (defn ^:private parse-int [s]
-  (let [n (js/parseInt s 10)]
+  (let [n (js/parseInt s)]
     (if-not (js/isNaN n) n)))
 
 (def MONTH (js-obj
@@ -41,28 +43,44 @@
 (defn is-uppercase [s]
   (= s (str/upper-case s)))
 
+(defn update-initial-state [body state]
+  (js/console.log "state initial call")
+  (let [month (:month body)
+        date-object  (:date body)
+        curr  (keyword month)
+        date  (parse-int (get-in date-object [:data :date] ))
+        _ (js/console.log "date" date "month" month)
+        start-times(get-in date-object [:data :startTime])
+        end-times  (get-in date-object [:data :endTime  ])
+        curr-date (- date 1)]
+    (swap! (:days-data state)
+      assoc-in
+        [curr date :entry :start] start-times)
+   (swap! (:days-data state)
+      assoc-in
+        [curr date :entry :end] end-times)))
+
 ;; table container
+(defn handle-request [state]
+  (go
+    (let [data (<! (r/fetch-data))
+          body (:body data)
+          nodes (:nodes body)]
+      (dorun (map #(update-initial-state % state) nodes)) state)))
 
 (defn handle-click-date [id state]
-  (js/console.log "id" @(:current-month state))
   (let [curr (keyword @(:current-month state))
         curr-date id
         curr-state (- curr-date 1)]
-      (js/console.log "id" @(:days-data state))
-      (js/console.log "state i" (get-in (:days-data state) [:JAN 0 :id]))
-      (swap! (:days-data state) assoc-in [curr curr-state entry :click] true)
-      (js/console.log "date" curr-date)
-      (js/console.log "state" (get-in @(:days-data state) [curr]))))
+      (swap! (:days-data state) assoc-in [curr curr-state :entry :click] true)))
 
 (defn table-container [state]
-  (let [ month-days      (aget MONTH @(:current-month state))
-         empty-first-row (get days (keyword @(:day state)))
-         current-month  @(:current-month state)]
-    [table month-days empty-first-row current-month #(handle-click-date % state)]))
-
+  (let [ current-month  @(:current-month state)
+         month-days     (aget MONTH @(:current-month state))
+         empty-first-row (get days (keyword @(:day state)))]
+    [table month-days empty-first-row current-month #(handle-click-date % state) #(handle-request state)]))
 
 ;; form container
-
 (defn choose [e state]
   (reset! (:current-month state)(.-value (.-target e)))
   (let [n (aget offset @(:current-month state))

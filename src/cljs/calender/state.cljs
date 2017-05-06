@@ -5,22 +5,29 @@
               [accountant.core :as accountant]
               [goog.string :as gstring]
               [goog.string.format :as format]
-              [clojure.string :as str]))
+              [clojure.string :as str]
+              [calender.request :as r]))
 
-(defn add-id []
+(def MONTH (js-obj
+  "JAN" 31 "FEB" 28 "MAR" 31 "APR" 30
+  "MAY" 31 "JUNE" 30 "JULY" 31 "AUG" 31
+  "SEPT" 30 "OCT" 31 "NOV" 30 "DEC" 31))
+
+(defn add-id [j]
+  (js/console.log "state" (aget MONTH j))
   (let [ids
     (into []
       (map
         (fn [i] {:entry {:data nil :id (+ i 1) :start nil :end nil :duration nil :click false}})
-          (range 31)))] ids))
+          (range (aget MONTH j))))] ids))
 
-(defn initializer-state []
-  (.log js/console "state called")
-   (let [month-array '(:JAN :FEB :MAR :APR :MAY :JUNE :JULY :AUG :SEPT :OCT :NOV :DEC)
-         keyword-array (into [] (map keyword month-array))
+(defn initializer-state [month]
+   (let [month-array '("JAN" "FEB" "MAR" "APR" "MAY" "JUNE" "JULY" "AUG" "SEPT" "OCT" "NOV" "DEC")
+         keyword-array (map keyword month-array)
+         _ (js/console.log "gasg" (pr-str keyword-array))
          data (into {}
                 (map
-                  (fn[i] {i (add-id)}) month-array))] data))
+                  (fn[i j] {i (add-id j)}) keyword-array month-array))] data))
 
 ;; (defonce view-pop (reagent/atom false))
 ;; (defonce current-month (reagent/atom "FEB"))
@@ -38,8 +45,8 @@
 ;; ;; (defonce empty-row (reagent/atom (get days (keyword @day))))
 
 (defn initial-state []
-  (let [days-data (reagent/atom (initializer-state))
-        values (reagent/atom {:dur nil :end nil :start nil :date nil :data nil})
+  (let [values (reagent/atom {:dur nil :end nil :start nil :date nil :data nil})
         current-month (reagent/atom "JAN")
-        day (reagent/atom "SUNDAY")]
+        day (reagent/atom "SUNDAY")
+        days-data (reagent/atom (initializer-state @current-month))]
     {:current-month current-month :day day :days-data days-data :values values}))

@@ -37,25 +37,21 @@
      mount-target
      (include-js "/js/app.js")]))
 
-(defn test-f [r]
-  (log/info r)
-  (log/info "f")
-  (response "success"))
-
-(defn test-function []
-  (let [data {:date 2 :data "data" :month "JAN" :start-time 1 :end-time 2 :duration 1}]
-    (db/create-date-node data)
-  (response {:text (format "The test route works: %s" (:name data))})))
+(defn handle-fetch-data [req]
+  (log/info "req" req)
+  (let [body (json->map (:body req))
+        nodes (db/traverse-node body)]
+    (response {:nodes nodes})))
 
 (defn handle-send-date [req]
-  (let [body (json->map(:body req))]
+  (let [body (json->map (:body req))]
     (db/create-date-node body)
     (response {:text "The node has been created"})))
 
 (defroutes routes
   (GET "/" [] (loading-page))
   (GET "/about" [] (loading-page))
-  (GET "/test" [] (test-function))
+  (POST "/fetch" req (handle-fetch-data req))
   (POST "/save" req (handle-send-date req))
   (resources "/")
   (not-found "Not Found"))

@@ -8,7 +8,7 @@
               [clojure.string :as str]
               [calender.state :refer [initial-state]]
               [calender.component :refer [title]]
-              [calender.container :refer [table-container form-container]]))
+              [calender.container :refer [table-container form-container handle-request]]))
 
 ;;initializign js object
 
@@ -29,9 +29,7 @@
 ;; Views
 ;; state management
 
-
 (defonce state (initial-state))
-
 ;; (defn toggle-class [obj j]
 ;;   (let [s (:text obj)]
 ;;     (if (is-uppercase s)
@@ -46,7 +44,7 @@
 
 (defn main-page []
   (reagent/create-class
-    {:component-did-mount #()
+    {:component-did-mount #(handle-request state)
      :reagent-render
        (fn[]
          [:div

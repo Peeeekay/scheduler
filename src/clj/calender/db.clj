@@ -14,7 +14,6 @@
   (clojure.walk/keywordize-keys data))
 
 (defn extract-id [node]
-  (log/info node)
   (-> node
      (string->key)
      (:n)
@@ -42,12 +41,9 @@
  (nn/create conn property))
 
 (defn create-relationship [from to relation property conn]
-  (log/info to)
   (nrl/create conn from to relation property))
 
 (defn date-exist? [month-node date-node conn]
-  (log/info "Exist")
-  (log/info (nil? date-node))
   (let []
     (cond (nil? date-node) false
       :else (np/exists-between? conn (:id month-node) (:id date-node) :relationships [{:direction "out" :type "date"}]))))
@@ -97,6 +93,28 @@
         (add-label node conn "Month")
         (log/info "Node successfully created"))
   (catch Exception ex (log/error "Node already exists"))))
+
+;;;;;;;;;;;;;;;;;;;;;;
+
+(defn traverse-node [body]
+  (let [{:keys [month]} body
+        conn (nr/connect "http://test:test123@localhost:7474/db/data/")
+        month-node (get-month-node month conn)]
+       (cy/tquery conn "MATCH (node:Month)-[r:date]->(date:Date) RETURN node.value AS month,date")))
+;;     (nn/traverse conn (:id month-node) :relationships [{:direction "out" :type "date"}] :return-filter {:language "builtin" :name "all_but_start_node"})))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 (defn -main [& args]
   (let [conn (nr/connect "http://test:test123@localhost:7474/db/data/")
