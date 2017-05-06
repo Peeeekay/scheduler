@@ -55,11 +55,14 @@
   (map vector a b))
 
 (defn add-td [obj value clicked-date]
-
   ^{:key (gstring/format "td%s" value) :id (get-in obj [:entry :id])}
      [:td {:on-click #(clicked-date (get-in obj [:entry :id]))}
-       (get-in value [:entry :id]) (map (fn [value] [:li (nth value 0) "to" (nth value 1)])
-          (zip (get-in value [:entry :start]) (get-in value [:entry :end])))])
+       (get-in value [:entry :id])
+       (map
+         (fn [value] [:li (nth value 0) "to" (nth value 1)])
+          (zip
+            (get-in value [:entry :start])
+            (get-in value [:entry :end])))])
 
 (defn table-first-row [total-empty non-empty handle-click]
       (let [se (concat (repeat total-empty 0) non-empty)
