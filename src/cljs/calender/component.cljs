@@ -50,8 +50,16 @@
 (defn empty-td [num]
  ^{:key (gstring/format "td_empty%s" num)}[:td])
 
-(defn add-td [num value clicked-date]
-  ^{:key (gstring/format "td%s" value) :id num}[:td {:on-click #(clicked-date num)} value ])
+(defn zip [a b]
+  (js/console.log (pr-str a) (pr-str b))
+  (map vector a b))
+
+(defn add-td [obj value clicked-date]
+
+  ^{:key (gstring/format "td%s" value) :id (get-in obj [:entry :id])}
+     [:td {:on-click #(clicked-date (get-in obj [:entry :id]))}
+       (get-in value [:entry :id]) (map (fn [value] [:li (nth value 0) "to" (nth value 1)])
+          (zip (get-in value [:entry :start]) (get-in value [:entry :end])))])
 
 (defn table-first-row [total-empty non-empty handle-click]
       (let [se (concat (repeat total-empty 0) non-empty)
@@ -70,6 +78,7 @@
 (defn table-last-row [total-empty non-empty handle-click]
     (let [se (concat non-empty (repeat total-empty 0))
           k  (concat non-empty (range (last non-empty)(+ total-empty (last non-empty))))]
+      (js/console.log (pr-str se) "k" (pr-str k))
       (map
         (fn [value num]
             (if-not (= 0 value)
@@ -77,10 +86,10 @@
               (empty-td num))) se k)))
 
 (defn table
-  [month-days empty-first-row curr-month handle-click-date handle-request]
+  [days-vector month-days empty-first-row curr-month handle-click-date handle-request]
   (let [ remainder      (mod (- month-days (- 7 empty-first-row)) 7)
          empty-last-row (- 7 remainder)
-         days-vector    (into [] (map inc (range month-days)))
+;;          days-vector    (into [] (map inc (range month-days)))
          first-row      (take (- 7 empty-first-row) days-vector)
          middle         (subvec days-vector (- 7 empty-first-row) (- month-days remainder))
          last-row       (take-last remainder days-vector)

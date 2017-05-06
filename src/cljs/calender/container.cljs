@@ -55,10 +55,10 @@
         curr-date (- date 1)]
     (swap! (:days-data state)
       assoc-in
-        [curr date :entry :start] start-times)
+        [curr curr-date :entry :start] start-times)
    (swap! (:days-data state)
       assoc-in
-        [curr date :entry :end] end-times)))
+        [curr curr-date :entry :end] end-times)))
 
 ;; table container
 (defn handle-request [state]
@@ -69,6 +69,7 @@
       (dorun (map #(update-initial-state % state) nodes)) state)))
 
 (defn handle-click-date [id state]
+  (js/console.log "id" id)
   (let [curr (keyword @(:current-month state))
         curr-date id
         curr-state (- curr-date 1)]
@@ -76,9 +77,10 @@
 
 (defn table-container [state]
   (let [ current-month  @(:current-month state)
+         days-data ((keyword current-month) @(:days-data state))
          month-days     (aget MONTH @(:current-month state))
          empty-first-row (get days (keyword @(:day state)))]
-    [table month-days empty-first-row current-month #(handle-click-date % state) #(handle-request state)]))
+    [table days-data month-days empty-first-row current-month #(handle-click-date % state) #(handle-request state)]))
 
 ;; form container
 (defn choose [e state]
@@ -105,7 +107,11 @@
   (let [value @(:values state)
         month @(:current-month state)
         body (conj value {:month month})]
-        (if (check-nil value)(r/send-data body)(js/console.log "error"))))
+        (if (check-nil value)
+          (go
+            (let [resp (<! (r/send-data body)) status (:status resp)]
+              (when (= status 200)
+                (handle-request state)))) (js/console.log "error"))))
 
 (defn form-container [state]
   (let [value @(:values state)]
